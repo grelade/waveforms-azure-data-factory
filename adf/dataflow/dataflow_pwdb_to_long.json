@@ -43,6 +43,29 @@
 				},
 				{
 					"name": "splitSessionId"
+				},
+				{
+					"name": "aggMinTimestamps"
+				},
+				{
+					"name": "joinTimestamps"
+				},
+				{
+					"name": "TimestampRel",
+					"description": "timestamp_min, timestamp_rel'"
+				},
+				{
+					"name": "createWaveformID"
+				},
+				{
+					"name": "mainDBdropExtraColumns"
+				},
+				{
+					"name": "initTimestampDBdropExtraColumns",
+					"description": "prepare auxiliary db with initial timestamp per waveform"
+				},
+				{
+					"name": "dropDuplicates"
 				}
 			],
 			"scriptLines": [
@@ -566,9 +589,35 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> renameColumns",
 				"mmdb filter(({signal_type}=='cath_signal') && (split({session_id},'-')[2]=='stacked1')) ~> filterCathSignalAndStacked",
-				"filterCathSignalAndStacked derive(cad_name = split({session_id},'-')[1],",
-				"          n_stacks = toInteger(dropLeft(split({session_id},'-')[2],7)),",
-				"          waveform_num = toInteger(split({session_id},'-')[3])) ~> splitSessionId",
+				"filterCathSignalAndStacked derive(cad_name = split(session_id,'-')[1],",
+				"          n_stacks = toInteger(dropLeft(split(session_id,'-')[2],7)),",
+				"          waveform_num = toInteger(split(session_id,'-')[3]),",
+				"          timestamp = toLong({timestamp}),",
+				"          value = toFloat(value)) ~> splitSessionId",
+				"splitSessionId aggregate(groupBy(session_id),",
+				"     timestamp_min = min(timestamp)) ~> aggMinTimestamps",
+				"createWaveformID, aggMinTimestamps join(mmdb@session_id == aggMinTimestamps@session_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinTimestamps",
+				"joinTimestamps derive(timestamp_rel = timestamp - timestamp_min) ~> TimestampRel",
+				"splitSessionId derive(waveform_id = concatWS(\"_\", \"mmdb\", concat(\"s\", {cad_name}),\"pAorticRoot\",concat(\"n\", lpad(toString({waveform_num}),6,\"0\")))) ~> createWaveformID",
+				"TimestampRel select(mapColumn(",
+				"          waveform_id,",
+				"          timestamp_rel,",
+				"          value",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> mainDBdropExtraColumns",
+				"TimestampRel select(mapColumn(",
+				"          waveform_id,",
+				"          timestamp",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> initTimestampDBdropExtraColumns",
+				"initTimestampDBdropExtraColumns aggregate(groupBy(waveform_id),",
+				"     timestamp = min(timestamp)) ~> dropDuplicates",
 				"renameColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: true,",
 				"     partitionFileNames:['pwdb_long.csv'],",
