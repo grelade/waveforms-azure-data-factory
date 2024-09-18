@@ -1,0 +1,16 @@
+{
+	"name": "waveform_db",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "service_waveform_db",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "sql",
+			"table": "waveform_db"
+		}
+	}
+}
