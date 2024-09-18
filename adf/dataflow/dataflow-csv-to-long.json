@@ -1,5 +1,5 @@
 {
-	"name": "dataflow_pwdb_to_long",
+	"name": "dataflow-csv-to-long",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
