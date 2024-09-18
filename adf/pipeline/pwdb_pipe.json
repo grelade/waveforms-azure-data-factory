@@ -116,7 +116,8 @@
 					"enableLogging": false,
 					"storeSettings": {
 						"type": "AzureBlobStorageReadSettings",
-						"fileListPath": "output-waveform-data/pwdb_long.csv",
+						"recursive": true,
+						"wildcardFileName": "pwdb_long.csv",
 						"enablePartitionDiscovery": false
 					}
 				}

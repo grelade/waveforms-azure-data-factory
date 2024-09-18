@@ -10,6 +10,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "Source"
+				},
+				{
+					"dataset": {
+						"referenceName": "mmdb",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
 				}
 			],
 			"sinks": [
@@ -526,6 +533,15 @@
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false,",
 				"     partitionBy('hash', 1)) ~> Source",
+				"source(output(",
+				"          session_id as string,",
+				"          signal_type as string,",
+				"          value as string,",
+				"          timestamp as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
 				"Source unpivot(output(",
 				"          variable as string,",
 				"          value as string",
