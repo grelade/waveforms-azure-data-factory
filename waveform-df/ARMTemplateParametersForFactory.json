@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "waveform-df"
+		},
+		"data_blob_properties_typeProperties_serviceEndpoint": {
+			"value": "https://waveformstorage1234.blob.core.windows.net/"
+		},
+		"service_waveform_db_properties_typeProperties_server": {
+			"value": "waveform-sql-server.database.windows.net"
+		},
+		"service_waveform_db_properties_typeProperties_database": {
+			"value": "waveform_db"
+		}
+	}
+}

@@ -1,0 +1,3129 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "waveform-df"
+		},
+		"data_blob_properties_typeProperties_serviceEndpoint": {
+			"type": "string",
+			"defaultValue": "https://waveformstorage1234.blob.core.windows.net/"
+		},
+		"service_waveform_db_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "waveform-sql-server.database.windows.net"
+		},
+		"service_waveform_db_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "waveform_db"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pwdb_pipe')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "copy_pwdb_long_csv_to_sql",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "dataflow-csv-to-long",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "pwdb_long.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": false,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "output_blob",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "pwdb_sql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "delete_pwdb_long",
+						"description": "delete pwdb_long.csv",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "copy_pwdb_long_csv_to_sql",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "output_blob",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"wildcardFileName": "pwdb_long.csv",
+								"enablePartitionDiscovery": false
+							}
+						}
+					},
+					{
+						"name": "dataflow-csv-to-long",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "dataflow-csv-to-long",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"pwdb": {},
+									"mmdb": {},
+									"SinkPWDBMain": {},
+									"SinkMMDBMain": {},
+									"SinkMMDBInitTimestamps": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "copy_mmdb_init_ts_csv_to_sql",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "dataflow-csv-to-long",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "mmdb_init_ts.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": false,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "output_blob",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "mmdb_init_ts_sql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "copy_mmdb_long_csv_to_sql",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "dataflow-csv-to-long",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "mmdb_long.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": false,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "output_blob",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "mmdb_sql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/output_blob')]",
+				"[concat(variables('factoryId'), '/datasets/pwdb_sql')]",
+				"[concat(variables('factoryId'), '/dataflows/dataflow-csv-to-long')]",
+				"[concat(variables('factoryId'), '/datasets/mmdb_init_ts_sql')]",
+				"[concat(variables('factoryId'), '/datasets/mmdb_sql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/mmdb')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "data_blob",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "mmdb-agg_inputs_CAD",
+						"container": "raw-waveform-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "session_id",
+						"type": "String"
+					},
+					{
+						"name": "signal_type",
+						"type": "String"
+					},
+					{
+						"name": "value",
+						"type": "String"
+					},
+					{
+						"name": "timestamp",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/data_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/mmdb_init_ts_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "service_waveform_db",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "sql",
+					"table": "mmdb_init_ts"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/service_waveform_db')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/mmdb_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "service_waveform_db",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "sql",
+					"table": "mmdb"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/service_waveform_db')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/output_blob')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "data_blob",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "output-waveform-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/data_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pwdb')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "data_blob",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "pwdb-PWs_AorticRoot_P",
+						"container": "raw-waveform-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Subject Number",
+						"type": "String"
+					},
+					{
+						"name": " pt1",
+						"type": "String"
+					},
+					{
+						"name": " pt2",
+						"type": "String"
+					},
+					{
+						"name": " pt3",
+						"type": "String"
+					},
+					{
+						"name": " pt4",
+						"type": "String"
+					},
+					{
+						"name": " pt5",
+						"type": "String"
+					},
+					{
+						"name": " pt6",
+						"type": "String"
+					},
+					{
+						"name": " pt7",
+						"type": "String"
+					},
+					{
+						"name": " pt8",
+						"type": "String"
+					},
+					{
+						"name": " pt9",
+						"type": "String"
+					},
+					{
+						"name": " pt10",
+						"type": "String"
+					},
+					{
+						"name": " pt11",
+						"type": "String"
+					},
+					{
+						"name": " pt12",
+						"type": "String"
+					},
+					{
+						"name": " pt13",
+						"type": "String"
+					},
+					{
+						"name": " pt14",
+						"type": "String"
+					},
+					{
+						"name": " pt15",
+						"type": "String"
+					},
+					{
+						"name": " pt16",
+						"type": "String"
+					},
+					{
+						"name": " pt17",
+						"type": "String"
+					},
+					{
+						"name": " pt18",
+						"type": "String"
+					},
+					{
+						"name": " pt19",
+						"type": "String"
+					},
+					{
+						"name": " pt20",
+						"type": "String"
+					},
+					{
+						"name": " pt21",
+						"type": "String"
+					},
+					{
+						"name": " pt22",
+						"type": "String"
+					},
+					{
+						"name": " pt23",
+						"type": "String"
+					},
+					{
+						"name": " pt24",
+						"type": "String"
+					},
+					{
+						"name": " pt25",
+						"type": "String"
+					},
+					{
+						"name": " pt26",
+						"type": "String"
+					},
+					{
+						"name": " pt27",
+						"type": "String"
+					},
+					{
+						"name": " pt28",
+						"type": "String"
+					},
+					{
+						"name": " pt29",
+						"type": "String"
+					},
+					{
+						"name": " pt30",
+						"type": "String"
+					},
+					{
+						"name": " pt31",
+						"type": "String"
+					},
+					{
+						"name": " pt32",
+						"type": "String"
+					},
+					{
+						"name": " pt33",
+						"type": "String"
+					},
+					{
+						"name": " pt34",
+						"type": "String"
+					},
+					{
+						"name": " pt35",
+						"type": "String"
+					},
+					{
+						"name": " pt36",
+						"type": "String"
+					},
+					{
+						"name": " pt37",
+						"type": "String"
+					},
+					{
+						"name": " pt38",
+						"type": "String"
+					},
+					{
+						"name": " pt39",
+						"type": "String"
+					},
+					{
+						"name": " pt40",
+						"type": "String"
+					},
+					{
+						"name": " pt41",
+						"type": "String"
+					},
+					{
+						"name": " pt42",
+						"type": "String"
+					},
+					{
+						"name": " pt43",
+						"type": "String"
+					},
+					{
+						"name": " pt44",
+						"type": "String"
+					},
+					{
+						"name": " pt45",
+						"type": "String"
+					},
+					{
+						"name": " pt46",
+						"type": "String"
+					},
+					{
+						"name": " pt47",
+						"type": "String"
+					},
+					{
+						"name": " pt48",
+						"type": "String"
+					},
+					{
+						"name": " pt49",
+						"type": "String"
+					},
+					{
+						"name": " pt50",
+						"type": "String"
+					},
+					{
+						"name": " pt51",
+						"type": "String"
+					},
+					{
+						"name": " pt52",
+						"type": "String"
+					},
+					{
+						"name": " pt53",
+						"type": "String"
+					},
+					{
+						"name": " pt54",
+						"type": "String"
+					},
+					{
+						"name": " pt55",
+						"type": "String"
+					},
+					{
+						"name": " pt56",
+						"type": "String"
+					},
+					{
+						"name": " pt57",
+						"type": "String"
+					},
+					{
+						"name": " pt58",
+						"type": "String"
+					},
+					{
+						"name": " pt59",
+						"type": "String"
+					},
+					{
+						"name": " pt60",
+						"type": "String"
+					},
+					{
+						"name": " pt61",
+						"type": "String"
+					},
+					{
+						"name": " pt62",
+						"type": "String"
+					},
+					{
+						"name": " pt63",
+						"type": "String"
+					},
+					{
+						"name": " pt64",
+						"type": "String"
+					},
+					{
+						"name": " pt65",
+						"type": "String"
+					},
+					{
+						"name": " pt66",
+						"type": "String"
+					},
+					{
+						"name": " pt67",
+						"type": "String"
+					},
+					{
+						"name": " pt68",
+						"type": "String"
+					},
+					{
+						"name": " pt69",
+						"type": "String"
+					},
+					{
+						"name": " pt70",
+						"type": "String"
+					},
+					{
+						"name": " pt71",
+						"type": "String"
+					},
+					{
+						"name": " pt72",
+						"type": "String"
+					},
+					{
+						"name": " pt73",
+						"type": "String"
+					},
+					{
+						"name": " pt74",
+						"type": "String"
+					},
+					{
+						"name": " pt75",
+						"type": "String"
+					},
+					{
+						"name": " pt76",
+						"type": "String"
+					},
+					{
+						"name": " pt77",
+						"type": "String"
+					},
+					{
+						"name": " pt78",
+						"type": "String"
+					},
+					{
+						"name": " pt79",
+						"type": "String"
+					},
+					{
+						"name": " pt80",
+						"type": "String"
+					},
+					{
+						"name": " pt81",
+						"type": "String"
+					},
+					{
+						"name": " pt82",
+						"type": "String"
+					},
+					{
+						"name": " pt83",
+						"type": "String"
+					},
+					{
+						"name": " pt84",
+						"type": "String"
+					},
+					{
+						"name": " pt85",
+						"type": "String"
+					},
+					{
+						"name": " pt86",
+						"type": "String"
+					},
+					{
+						"name": " pt87",
+						"type": "String"
+					},
+					{
+						"name": " pt88",
+						"type": "String"
+					},
+					{
+						"name": " pt89",
+						"type": "String"
+					},
+					{
+						"name": " pt90",
+						"type": "String"
+					},
+					{
+						"name": " pt91",
+						"type": "String"
+					},
+					{
+						"name": " pt92",
+						"type": "String"
+					},
+					{
+						"name": " pt93",
+						"type": "String"
+					},
+					{
+						"name": " pt94",
+						"type": "String"
+					},
+					{
+						"name": " pt95",
+						"type": "String"
+					},
+					{
+						"name": " pt96",
+						"type": "String"
+					},
+					{
+						"name": " pt97",
+						"type": "String"
+					},
+					{
+						"name": " pt98",
+						"type": "String"
+					},
+					{
+						"name": " pt99",
+						"type": "String"
+					},
+					{
+						"name": " pt100",
+						"type": "String"
+					},
+					{
+						"name": " pt101",
+						"type": "String"
+					},
+					{
+						"name": " pt102",
+						"type": "String"
+					},
+					{
+						"name": " pt103",
+						"type": "String"
+					},
+					{
+						"name": " pt104",
+						"type": "String"
+					},
+					{
+						"name": " pt105",
+						"type": "String"
+					},
+					{
+						"name": " pt106",
+						"type": "String"
+					},
+					{
+						"name": " pt107",
+						"type": "String"
+					},
+					{
+						"name": " pt108",
+						"type": "String"
+					},
+					{
+						"name": " pt109",
+						"type": "String"
+					},
+					{
+						"name": " pt110",
+						"type": "String"
+					},
+					{
+						"name": " pt111",
+						"type": "String"
+					},
+					{
+						"name": " pt112",
+						"type": "String"
+					},
+					{
+						"name": " pt113",
+						"type": "String"
+					},
+					{
+						"name": " pt114",
+						"type": "String"
+					},
+					{
+						"name": " pt115",
+						"type": "String"
+					},
+					{
+						"name": " pt116",
+						"type": "String"
+					},
+					{
+						"name": " pt117",
+						"type": "String"
+					},
+					{
+						"name": " pt118",
+						"type": "String"
+					},
+					{
+						"name": " pt119",
+						"type": "String"
+					},
+					{
+						"name": " pt120",
+						"type": "String"
+					},
+					{
+						"name": " pt121",
+						"type": "String"
+					},
+					{
+						"name": " pt122",
+						"type": "String"
+					},
+					{
+						"name": " pt123",
+						"type": "String"
+					},
+					{
+						"name": " pt124",
+						"type": "String"
+					},
+					{
+						"name": " pt125",
+						"type": "String"
+					},
+					{
+						"name": " pt126",
+						"type": "String"
+					},
+					{
+						"name": " pt127",
+						"type": "String"
+					},
+					{
+						"name": " pt128",
+						"type": "String"
+					},
+					{
+						"name": " pt129",
+						"type": "String"
+					},
+					{
+						"name": " pt130",
+						"type": "String"
+					},
+					{
+						"name": " pt131",
+						"type": "String"
+					},
+					{
+						"name": " pt132",
+						"type": "String"
+					},
+					{
+						"name": " pt133",
+						"type": "String"
+					},
+					{
+						"name": " pt134",
+						"type": "String"
+					},
+					{
+						"name": " pt135",
+						"type": "String"
+					},
+					{
+						"name": " pt136",
+						"type": "String"
+					},
+					{
+						"name": " pt137",
+						"type": "String"
+					},
+					{
+						"name": " pt138",
+						"type": "String"
+					},
+					{
+						"name": " pt139",
+						"type": "String"
+					},
+					{
+						"name": " pt140",
+						"type": "String"
+					},
+					{
+						"name": " pt141",
+						"type": "String"
+					},
+					{
+						"name": " pt142",
+						"type": "String"
+					},
+					{
+						"name": " pt143",
+						"type": "String"
+					},
+					{
+						"name": " pt144",
+						"type": "String"
+					},
+					{
+						"name": " pt145",
+						"type": "String"
+					},
+					{
+						"name": " pt146",
+						"type": "String"
+					},
+					{
+						"name": " pt147",
+						"type": "String"
+					},
+					{
+						"name": " pt148",
+						"type": "String"
+					},
+					{
+						"name": " pt149",
+						"type": "String"
+					},
+					{
+						"name": " pt150",
+						"type": "String"
+					},
+					{
+						"name": " pt151",
+						"type": "String"
+					},
+					{
+						"name": " pt152",
+						"type": "String"
+					},
+					{
+						"name": " pt153",
+						"type": "String"
+					},
+					{
+						"name": " pt154",
+						"type": "String"
+					},
+					{
+						"name": " pt155",
+						"type": "String"
+					},
+					{
+						"name": " pt156",
+						"type": "String"
+					},
+					{
+						"name": " pt157",
+						"type": "String"
+					},
+					{
+						"name": " pt158",
+						"type": "String"
+					},
+					{
+						"name": " pt159",
+						"type": "String"
+					},
+					{
+						"name": " pt160",
+						"type": "String"
+					},
+					{
+						"name": " pt161",
+						"type": "String"
+					},
+					{
+						"name": " pt162",
+						"type": "String"
+					},
+					{
+						"name": " pt163",
+						"type": "String"
+					},
+					{
+						"name": " pt164",
+						"type": "String"
+					},
+					{
+						"name": " pt165",
+						"type": "String"
+					},
+					{
+						"name": " pt166",
+						"type": "String"
+					},
+					{
+						"name": " pt167",
+						"type": "String"
+					},
+					{
+						"name": " pt168",
+						"type": "String"
+					},
+					{
+						"name": " pt169",
+						"type": "String"
+					},
+					{
+						"name": " pt170",
+						"type": "String"
+					},
+					{
+						"name": " pt171",
+						"type": "String"
+					},
+					{
+						"name": " pt172",
+						"type": "String"
+					},
+					{
+						"name": " pt173",
+						"type": "String"
+					},
+					{
+						"name": " pt174",
+						"type": "String"
+					},
+					{
+						"name": " pt175",
+						"type": "String"
+					},
+					{
+						"name": " pt176",
+						"type": "String"
+					},
+					{
+						"name": " pt177",
+						"type": "String"
+					},
+					{
+						"name": " pt178",
+						"type": "String"
+					},
+					{
+						"name": " pt179",
+						"type": "String"
+					},
+					{
+						"name": " pt180",
+						"type": "String"
+					},
+					{
+						"name": " pt181",
+						"type": "String"
+					},
+					{
+						"name": " pt182",
+						"type": "String"
+					},
+					{
+						"name": " pt183",
+						"type": "String"
+					},
+					{
+						"name": " pt184",
+						"type": "String"
+					},
+					{
+						"name": " pt185",
+						"type": "String"
+					},
+					{
+						"name": " pt186",
+						"type": "String"
+					},
+					{
+						"name": " pt187",
+						"type": "String"
+					},
+					{
+						"name": " pt188",
+						"type": "String"
+					},
+					{
+						"name": " pt189",
+						"type": "String"
+					},
+					{
+						"name": " pt190",
+						"type": "String"
+					},
+					{
+						"name": " pt191",
+						"type": "String"
+					},
+					{
+						"name": " pt192",
+						"type": "String"
+					},
+					{
+						"name": " pt193",
+						"type": "String"
+					},
+					{
+						"name": " pt194",
+						"type": "String"
+					},
+					{
+						"name": " pt195",
+						"type": "String"
+					},
+					{
+						"name": " pt196",
+						"type": "String"
+					},
+					{
+						"name": " pt197",
+						"type": "String"
+					},
+					{
+						"name": " pt198",
+						"type": "String"
+					},
+					{
+						"name": " pt199",
+						"type": "String"
+					},
+					{
+						"name": " pt200",
+						"type": "String"
+					},
+					{
+						"name": " pt201",
+						"type": "String"
+					},
+					{
+						"name": " pt202",
+						"type": "String"
+					},
+					{
+						"name": " pt203",
+						"type": "String"
+					},
+					{
+						"name": " pt204",
+						"type": "String"
+					},
+					{
+						"name": " pt205",
+						"type": "String"
+					},
+					{
+						"name": " pt206",
+						"type": "String"
+					},
+					{
+						"name": " pt207",
+						"type": "String"
+					},
+					{
+						"name": " pt208",
+						"type": "String"
+					},
+					{
+						"name": " pt209",
+						"type": "String"
+					},
+					{
+						"name": " pt210",
+						"type": "String"
+					},
+					{
+						"name": " pt211",
+						"type": "String"
+					},
+					{
+						"name": " pt212",
+						"type": "String"
+					},
+					{
+						"name": " pt213",
+						"type": "String"
+					},
+					{
+						"name": " pt214",
+						"type": "String"
+					},
+					{
+						"name": " pt215",
+						"type": "String"
+					},
+					{
+						"name": " pt216",
+						"type": "String"
+					},
+					{
+						"name": " pt217",
+						"type": "String"
+					},
+					{
+						"name": " pt218",
+						"type": "String"
+					},
+					{
+						"name": " pt219",
+						"type": "String"
+					},
+					{
+						"name": " pt220",
+						"type": "String"
+					},
+					{
+						"name": " pt221",
+						"type": "String"
+					},
+					{
+						"name": " pt222",
+						"type": "String"
+					},
+					{
+						"name": " pt223",
+						"type": "String"
+					},
+					{
+						"name": " pt224",
+						"type": "String"
+					},
+					{
+						"name": " pt225",
+						"type": "String"
+					},
+					{
+						"name": " pt226",
+						"type": "String"
+					},
+					{
+						"name": " pt227",
+						"type": "String"
+					},
+					{
+						"name": " pt228",
+						"type": "String"
+					},
+					{
+						"name": " pt229",
+						"type": "String"
+					},
+					{
+						"name": " pt230",
+						"type": "String"
+					},
+					{
+						"name": " pt231",
+						"type": "String"
+					},
+					{
+						"name": " pt232",
+						"type": "String"
+					},
+					{
+						"name": " pt233",
+						"type": "String"
+					},
+					{
+						"name": " pt234",
+						"type": "String"
+					},
+					{
+						"name": " pt235",
+						"type": "String"
+					},
+					{
+						"name": " pt236",
+						"type": "String"
+					},
+					{
+						"name": " pt237",
+						"type": "String"
+					},
+					{
+						"name": " pt238",
+						"type": "String"
+					},
+					{
+						"name": " pt239",
+						"type": "String"
+					},
+					{
+						"name": " pt240",
+						"type": "String"
+					},
+					{
+						"name": " pt241",
+						"type": "String"
+					},
+					{
+						"name": " pt242",
+						"type": "String"
+					},
+					{
+						"name": " pt243",
+						"type": "String"
+					},
+					{
+						"name": " pt244",
+						"type": "String"
+					},
+					{
+						"name": " pt245",
+						"type": "String"
+					},
+					{
+						"name": " pt246",
+						"type": "String"
+					},
+					{
+						"name": " pt247",
+						"type": "String"
+					},
+					{
+						"name": " pt248",
+						"type": "String"
+					},
+					{
+						"name": " pt249",
+						"type": "String"
+					},
+					{
+						"name": " pt250",
+						"type": "String"
+					},
+					{
+						"name": " pt251",
+						"type": "String"
+					},
+					{
+						"name": " pt252",
+						"type": "String"
+					},
+					{
+						"name": " pt253",
+						"type": "String"
+					},
+					{
+						"name": " pt254",
+						"type": "String"
+					},
+					{
+						"name": " pt255",
+						"type": "String"
+					},
+					{
+						"name": " pt256",
+						"type": "String"
+					},
+					{
+						"name": " pt257",
+						"type": "String"
+					},
+					{
+						"name": " pt258",
+						"type": "String"
+					},
+					{
+						"name": " pt259",
+						"type": "String"
+					},
+					{
+						"name": " pt260",
+						"type": "String"
+					},
+					{
+						"name": " pt261",
+						"type": "String"
+					},
+					{
+						"name": " pt262",
+						"type": "String"
+					},
+					{
+						"name": " pt263",
+						"type": "String"
+					},
+					{
+						"name": " pt264",
+						"type": "String"
+					},
+					{
+						"name": " pt265",
+						"type": "String"
+					},
+					{
+						"name": " pt266",
+						"type": "String"
+					},
+					{
+						"name": " pt267",
+						"type": "String"
+					},
+					{
+						"name": " pt268",
+						"type": "String"
+					},
+					{
+						"name": " pt269",
+						"type": "String"
+					},
+					{
+						"name": " pt270",
+						"type": "String"
+					},
+					{
+						"name": " pt271",
+						"type": "String"
+					},
+					{
+						"name": " pt272",
+						"type": "String"
+					},
+					{
+						"name": " pt273",
+						"type": "String"
+					},
+					{
+						"name": " pt274",
+						"type": "String"
+					},
+					{
+						"name": " pt275",
+						"type": "String"
+					},
+					{
+						"name": " pt276",
+						"type": "String"
+					},
+					{
+						"name": " pt277",
+						"type": "String"
+					},
+					{
+						"name": " pt278",
+						"type": "String"
+					},
+					{
+						"name": " pt279",
+						"type": "String"
+					},
+					{
+						"name": " pt280",
+						"type": "String"
+					},
+					{
+						"name": " pt281",
+						"type": "String"
+					},
+					{
+						"name": " pt282",
+						"type": "String"
+					},
+					{
+						"name": " pt283",
+						"type": "String"
+					},
+					{
+						"name": " pt284",
+						"type": "String"
+					},
+					{
+						"name": " pt285",
+						"type": "String"
+					},
+					{
+						"name": " pt286",
+						"type": "String"
+					},
+					{
+						"name": " pt287",
+						"type": "String"
+					},
+					{
+						"name": " pt288",
+						"type": "String"
+					},
+					{
+						"name": " pt289",
+						"type": "String"
+					},
+					{
+						"name": " pt290",
+						"type": "String"
+					},
+					{
+						"name": " pt291",
+						"type": "String"
+					},
+					{
+						"name": " pt292",
+						"type": "String"
+					},
+					{
+						"name": " pt293",
+						"type": "String"
+					},
+					{
+						"name": " pt294",
+						"type": "String"
+					},
+					{
+						"name": " pt295",
+						"type": "String"
+					},
+					{
+						"name": " pt296",
+						"type": "String"
+					},
+					{
+						"name": " pt297",
+						"type": "String"
+					},
+					{
+						"name": " pt298",
+						"type": "String"
+					},
+					{
+						"name": " pt299",
+						"type": "String"
+					},
+					{
+						"name": " pt300",
+						"type": "String"
+					},
+					{
+						"name": " pt301",
+						"type": "String"
+					},
+					{
+						"name": " pt302",
+						"type": "String"
+					},
+					{
+						"name": " pt303",
+						"type": "String"
+					},
+					{
+						"name": " pt304",
+						"type": "String"
+					},
+					{
+						"name": " pt305",
+						"type": "String"
+					},
+					{
+						"name": " pt306",
+						"type": "String"
+					},
+					{
+						"name": " pt307",
+						"type": "String"
+					},
+					{
+						"name": " pt308",
+						"type": "String"
+					},
+					{
+						"name": " pt309",
+						"type": "String"
+					},
+					{
+						"name": " pt310",
+						"type": "String"
+					},
+					{
+						"name": " pt311",
+						"type": "String"
+					},
+					{
+						"name": " pt312",
+						"type": "String"
+					},
+					{
+						"name": " pt313",
+						"type": "String"
+					},
+					{
+						"name": " pt314",
+						"type": "String"
+					},
+					{
+						"name": " pt315",
+						"type": "String"
+					},
+					{
+						"name": " pt316",
+						"type": "String"
+					},
+					{
+						"name": " pt317",
+						"type": "String"
+					},
+					{
+						"name": " pt318",
+						"type": "String"
+					},
+					{
+						"name": " pt319",
+						"type": "String"
+					},
+					{
+						"name": " pt320",
+						"type": "String"
+					},
+					{
+						"name": " pt321",
+						"type": "String"
+					},
+					{
+						"name": " pt322",
+						"type": "String"
+					},
+					{
+						"name": " pt323",
+						"type": "String"
+					},
+					{
+						"name": " pt324",
+						"type": "String"
+					},
+					{
+						"name": " pt325",
+						"type": "String"
+					},
+					{
+						"name": " pt326",
+						"type": "String"
+					},
+					{
+						"name": " pt327",
+						"type": "String"
+					},
+					{
+						"name": " pt328",
+						"type": "String"
+					},
+					{
+						"name": " pt329",
+						"type": "String"
+					},
+					{
+						"name": " pt330",
+						"type": "String"
+					},
+					{
+						"name": " pt331",
+						"type": "String"
+					},
+					{
+						"name": " pt332",
+						"type": "String"
+					},
+					{
+						"name": " pt333",
+						"type": "String"
+					},
+					{
+						"name": " pt334",
+						"type": "String"
+					},
+					{
+						"name": " pt335",
+						"type": "String"
+					},
+					{
+						"name": " pt336",
+						"type": "String"
+					},
+					{
+						"name": " pt337",
+						"type": "String"
+					},
+					{
+						"name": " pt338",
+						"type": "String"
+					},
+					{
+						"name": " pt339",
+						"type": "String"
+					},
+					{
+						"name": " pt340",
+						"type": "String"
+					},
+					{
+						"name": " pt341",
+						"type": "String"
+					},
+					{
+						"name": " pt342",
+						"type": "String"
+					},
+					{
+						"name": " pt343",
+						"type": "String"
+					},
+					{
+						"name": " pt344",
+						"type": "String"
+					},
+					{
+						"name": " pt345",
+						"type": "String"
+					},
+					{
+						"name": " pt346",
+						"type": "String"
+					},
+					{
+						"name": " pt347",
+						"type": "String"
+					},
+					{
+						"name": " pt348",
+						"type": "String"
+					},
+					{
+						"name": " pt349",
+						"type": "String"
+					},
+					{
+						"name": " pt350",
+						"type": "String"
+					},
+					{
+						"name": " pt351",
+						"type": "String"
+					},
+					{
+						"name": " pt352",
+						"type": "String"
+					},
+					{
+						"name": " pt353",
+						"type": "String"
+					},
+					{
+						"name": " pt354",
+						"type": "String"
+					},
+					{
+						"name": " pt355",
+						"type": "String"
+					},
+					{
+						"name": " pt356",
+						"type": "String"
+					},
+					{
+						"name": " pt357",
+						"type": "String"
+					},
+					{
+						"name": " pt358",
+						"type": "String"
+					},
+					{
+						"name": " pt359",
+						"type": "String"
+					},
+					{
+						"name": " pt360",
+						"type": "String"
+					},
+					{
+						"name": " pt361",
+						"type": "String"
+					},
+					{
+						"name": " pt362",
+						"type": "String"
+					},
+					{
+						"name": " pt363",
+						"type": "String"
+					},
+					{
+						"name": " pt364",
+						"type": "String"
+					},
+					{
+						"name": " pt365",
+						"type": "String"
+					},
+					{
+						"name": " pt366",
+						"type": "String"
+					},
+					{
+						"name": " pt367",
+						"type": "String"
+					},
+					{
+						"name": " pt368",
+						"type": "String"
+					},
+					{
+						"name": " pt369",
+						"type": "String"
+					},
+					{
+						"name": " pt370",
+						"type": "String"
+					},
+					{
+						"name": " pt371",
+						"type": "String"
+					},
+					{
+						"name": " pt372",
+						"type": "String"
+					},
+					{
+						"name": " pt373",
+						"type": "String"
+					},
+					{
+						"name": " pt374",
+						"type": "String"
+					},
+					{
+						"name": " pt375",
+						"type": "String"
+					},
+					{
+						"name": " pt376",
+						"type": "String"
+					},
+					{
+						"name": " pt377",
+						"type": "String"
+					},
+					{
+						"name": " pt378",
+						"type": "String"
+					},
+					{
+						"name": " pt379",
+						"type": "String"
+					},
+					{
+						"name": " pt380",
+						"type": "String"
+					},
+					{
+						"name": " pt381",
+						"type": "String"
+					},
+					{
+						"name": " pt382",
+						"type": "String"
+					},
+					{
+						"name": " pt383",
+						"type": "String"
+					},
+					{
+						"name": " pt384",
+						"type": "String"
+					},
+					{
+						"name": " pt385",
+						"type": "String"
+					},
+					{
+						"name": " pt386",
+						"type": "String"
+					},
+					{
+						"name": " pt387",
+						"type": "String"
+					},
+					{
+						"name": " pt388",
+						"type": "String"
+					},
+					{
+						"name": " pt389",
+						"type": "String"
+					},
+					{
+						"name": " pt390",
+						"type": "String"
+					},
+					{
+						"name": " pt391",
+						"type": "String"
+					},
+					{
+						"name": " pt392",
+						"type": "String"
+					},
+					{
+						"name": " pt393",
+						"type": "String"
+					},
+					{
+						"name": " pt394",
+						"type": "String"
+					},
+					{
+						"name": " pt395",
+						"type": "String"
+					},
+					{
+						"name": " pt396",
+						"type": "String"
+					},
+					{
+						"name": " pt397",
+						"type": "String"
+					},
+					{
+						"name": " pt398",
+						"type": "String"
+					},
+					{
+						"name": " pt399",
+						"type": "String"
+					},
+					{
+						"name": " pt400",
+						"type": "String"
+					},
+					{
+						"name": " pt401",
+						"type": "String"
+					},
+					{
+						"name": " pt402",
+						"type": "String"
+					},
+					{
+						"name": " pt403",
+						"type": "String"
+					},
+					{
+						"name": " pt404",
+						"type": "String"
+					},
+					{
+						"name": " pt405",
+						"type": "String"
+					},
+					{
+						"name": " pt406",
+						"type": "String"
+					},
+					{
+						"name": " pt407",
+						"type": "String"
+					},
+					{
+						"name": " pt408",
+						"type": "String"
+					},
+					{
+						"name": " pt409",
+						"type": "String"
+					},
+					{
+						"name": " pt410",
+						"type": "String"
+					},
+					{
+						"name": " pt411",
+						"type": "String"
+					},
+					{
+						"name": " pt412",
+						"type": "String"
+					},
+					{
+						"name": " pt413",
+						"type": "String"
+					},
+					{
+						"name": " pt414",
+						"type": "String"
+					},
+					{
+						"name": " pt415",
+						"type": "String"
+					},
+					{
+						"name": " pt416",
+						"type": "String"
+					},
+					{
+						"name": " pt417",
+						"type": "String"
+					},
+					{
+						"name": " pt418",
+						"type": "String"
+					},
+					{
+						"name": " pt419",
+						"type": "String"
+					},
+					{
+						"name": " pt420",
+						"type": "String"
+					},
+					{
+						"name": " pt421",
+						"type": "String"
+					},
+					{
+						"name": " pt422",
+						"type": "String"
+					},
+					{
+						"name": " pt423",
+						"type": "String"
+					},
+					{
+						"name": " pt424",
+						"type": "String"
+					},
+					{
+						"name": " pt425",
+						"type": "String"
+					},
+					{
+						"name": " pt426",
+						"type": "String"
+					},
+					{
+						"name": " pt427",
+						"type": "String"
+					},
+					{
+						"name": " pt428",
+						"type": "String"
+					},
+					{
+						"name": " pt429",
+						"type": "String"
+					},
+					{
+						"name": " pt430",
+						"type": "String"
+					},
+					{
+						"name": " pt431",
+						"type": "String"
+					},
+					{
+						"name": " pt432",
+						"type": "String"
+					},
+					{
+						"name": " pt433",
+						"type": "String"
+					},
+					{
+						"name": " pt434",
+						"type": "String"
+					},
+					{
+						"name": " pt435",
+						"type": "String"
+					},
+					{
+						"name": " pt436",
+						"type": "String"
+					},
+					{
+						"name": " pt437",
+						"type": "String"
+					},
+					{
+						"name": " pt438",
+						"type": "String"
+					},
+					{
+						"name": " pt439",
+						"type": "String"
+					},
+					{
+						"name": " pt440",
+						"type": "String"
+					},
+					{
+						"name": " pt441",
+						"type": "String"
+					},
+					{
+						"name": " pt442",
+						"type": "String"
+					},
+					{
+						"name": " pt443",
+						"type": "String"
+					},
+					{
+						"name": " pt444",
+						"type": "String"
+					},
+					{
+						"name": " pt445",
+						"type": "String"
+					},
+					{
+						"name": " pt446",
+						"type": "String"
+					},
+					{
+						"name": " pt447",
+						"type": "String"
+					},
+					{
+						"name": " pt448",
+						"type": "String"
+					},
+					{
+						"name": " pt449",
+						"type": "String"
+					},
+					{
+						"name": " pt450",
+						"type": "String"
+					},
+					{
+						"name": " pt451",
+						"type": "String"
+					},
+					{
+						"name": " pt452",
+						"type": "String"
+					},
+					{
+						"name": " pt453",
+						"type": "String"
+					},
+					{
+						"name": " pt454",
+						"type": "String"
+					},
+					{
+						"name": " pt455",
+						"type": "String"
+					},
+					{
+						"name": " pt456",
+						"type": "String"
+					},
+					{
+						"name": " pt457",
+						"type": "String"
+					},
+					{
+						"name": " pt458",
+						"type": "String"
+					},
+					{
+						"name": " pt459",
+						"type": "String"
+					},
+					{
+						"name": " pt460",
+						"type": "String"
+					},
+					{
+						"name": " pt461",
+						"type": "String"
+					},
+					{
+						"name": " pt462",
+						"type": "String"
+					},
+					{
+						"name": " pt463",
+						"type": "String"
+					},
+					{
+						"name": " pt464",
+						"type": "String"
+					},
+					{
+						"name": " pt465",
+						"type": "String"
+					},
+					{
+						"name": " pt466",
+						"type": "String"
+					},
+					{
+						"name": " pt467",
+						"type": "String"
+					},
+					{
+						"name": " pt468",
+						"type": "String"
+					},
+					{
+						"name": " pt469",
+						"type": "String"
+					},
+					{
+						"name": " pt470",
+						"type": "String"
+					},
+					{
+						"name": " pt471",
+						"type": "String"
+					},
+					{
+						"name": " pt472",
+						"type": "String"
+					},
+					{
+						"name": " pt473",
+						"type": "String"
+					},
+					{
+						"name": " pt474",
+						"type": "String"
+					},
+					{
+						"name": " pt475",
+						"type": "String"
+					},
+					{
+						"name": " pt476",
+						"type": "String"
+					},
+					{
+						"name": " pt477",
+						"type": "String"
+					},
+					{
+						"name": " pt478",
+						"type": "String"
+					},
+					{
+						"name": " pt479",
+						"type": "String"
+					},
+					{
+						"name": " pt480",
+						"type": "String"
+					},
+					{
+						"name": " pt481",
+						"type": "String"
+					},
+					{
+						"name": " pt482",
+						"type": "String"
+					},
+					{
+						"name": " pt483",
+						"type": "String"
+					},
+					{
+						"name": " pt484",
+						"type": "String"
+					},
+					{
+						"name": " pt485",
+						"type": "String"
+					},
+					{
+						"name": " pt486",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/data_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pwdb_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "service_waveform_db",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "waveform_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "timestamp_rel",
+						"type": "nvarchar"
+					},
+					{
+						"name": "value",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "sql",
+					"table": "pwdb"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/service_waveform_db')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data_blob')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"serviceEndpoint": "[parameters('data_blob_properties_typeProperties_serviceEndpoint')]",
+					"accountKind": "BlobStorage"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/service_waveform_db')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('service_waveform_db_properties_typeProperties_server')]",
+					"database": "[parameters('service_waveform_db_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SystemAssignedManagedIdentity"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/dataflow-csv-to-long')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "pwdb",
+								"type": "DatasetReference"
+							},
+							"name": "pwdb"
+						},
+						{
+							"dataset": {
+								"referenceName": "mmdb",
+								"type": "DatasetReference"
+							},
+							"name": "mmdb"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "output_blob",
+								"type": "DatasetReference"
+							},
+							"name": "SinkPWDBMain"
+						},
+						{
+							"dataset": {
+								"referenceName": "output_blob",
+								"type": "DatasetReference"
+							},
+							"name": "SinkMMDBMain",
+							"description": "Export MMDB data to output_blob"
+						},
+						{
+							"dataset": {
+								"referenceName": "output_blob",
+								"type": "DatasetReference"
+							},
+							"name": "SinkMMDBInitTimestamps"
+						}
+					],
+					"transformations": [
+						{
+							"name": "melt"
+						},
+						{
+							"name": "transformColumns"
+						},
+						{
+							"name": "renameColumns"
+						},
+						{
+							"name": "filterCathSignalAndStacked"
+						},
+						{
+							"name": "splitSessionId"
+						},
+						{
+							"name": "aggMinTimestamps"
+						},
+						{
+							"name": "joinTimestamps"
+						},
+						{
+							"name": "TimestampRel",
+							"description": "timestamp_min, timestamp_rel'"
+						},
+						{
+							"name": "createWaveformID"
+						},
+						{
+							"name": "mainDBdropExtraColumns"
+						},
+						{
+							"name": "initTimestampDBdropExtraColumns",
+							"description": "prepare auxiliary db with initial timestamp per waveform"
+						},
+						{
+							"name": "dropDuplicates"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {Subject Number} as string,",
+						"          { pt1} as string,",
+						"          { pt2} as string,",
+						"          { pt3} as string,",
+						"          { pt4} as string,",
+						"          { pt5} as string,",
+						"          { pt6} as string,",
+						"          { pt7} as string,",
+						"          { pt8} as string,",
+						"          { pt9} as string,",
+						"          { pt10} as string,",
+						"          { pt11} as string,",
+						"          { pt12} as string,",
+						"          { pt13} as string,",
+						"          { pt14} as string,",
+						"          { pt15} as string,",
+						"          { pt16} as string,",
+						"          { pt17} as string,",
+						"          { pt18} as string,",
+						"          { pt19} as string,",
+						"          { pt20} as string,",
+						"          { pt21} as string,",
+						"          { pt22} as string,",
+						"          { pt23} as string,",
+						"          { pt24} as string,",
+						"          { pt25} as string,",
+						"          { pt26} as string,",
+						"          { pt27} as string,",
+						"          { pt28} as string,",
+						"          { pt29} as string,",
+						"          { pt30} as string,",
+						"          { pt31} as string,",
+						"          { pt32} as string,",
+						"          { pt33} as string,",
+						"          { pt34} as string,",
+						"          { pt35} as string,",
+						"          { pt36} as string,",
+						"          { pt37} as string,",
+						"          { pt38} as string,",
+						"          { pt39} as string,",
+						"          { pt40} as string,",
+						"          { pt41} as string,",
+						"          { pt42} as string,",
+						"          { pt43} as string,",
+						"          { pt44} as string,",
+						"          { pt45} as string,",
+						"          { pt46} as string,",
+						"          { pt47} as string,",
+						"          { pt48} as string,",
+						"          { pt49} as string,",
+						"          { pt50} as string,",
+						"          { pt51} as string,",
+						"          { pt52} as string,",
+						"          { pt53} as string,",
+						"          { pt54} as string,",
+						"          { pt55} as string,",
+						"          { pt56} as string,",
+						"          { pt57} as string,",
+						"          { pt58} as string,",
+						"          { pt59} as string,",
+						"          { pt60} as string,",
+						"          { pt61} as string,",
+						"          { pt62} as string,",
+						"          { pt63} as string,",
+						"          { pt64} as string,",
+						"          { pt65} as string,",
+						"          { pt66} as string,",
+						"          { pt67} as string,",
+						"          { pt68} as string,",
+						"          { pt69} as string,",
+						"          { pt70} as string,",
+						"          { pt71} as string,",
+						"          { pt72} as string,",
+						"          { pt73} as string,",
+						"          { pt74} as string,",
+						"          { pt75} as string,",
+						"          { pt76} as string,",
+						"          { pt77} as string,",
+						"          { pt78} as string,",
+						"          { pt79} as string,",
+						"          { pt80} as string,",
+						"          { pt81} as string,",
+						"          { pt82} as string,",
+						"          { pt83} as string,",
+						"          { pt84} as string,",
+						"          { pt85} as string,",
+						"          { pt86} as string,",
+						"          { pt87} as string,",
+						"          { pt88} as string,",
+						"          { pt89} as string,",
+						"          { pt90} as string,",
+						"          { pt91} as string,",
+						"          { pt92} as string,",
+						"          { pt93} as string,",
+						"          { pt94} as string,",
+						"          { pt95} as string,",
+						"          { pt96} as string,",
+						"          { pt97} as string,",
+						"          { pt98} as string,",
+						"          { pt99} as string,",
+						"          { pt100} as string,",
+						"          { pt101} as string,",
+						"          { pt102} as string,",
+						"          { pt103} as string,",
+						"          { pt104} as string,",
+						"          { pt105} as string,",
+						"          { pt106} as string,",
+						"          { pt107} as string,",
+						"          { pt108} as string,",
+						"          { pt109} as string,",
+						"          { pt110} as string,",
+						"          { pt111} as string,",
+						"          { pt112} as string,",
+						"          { pt113} as string,",
+						"          { pt114} as string,",
+						"          { pt115} as string,",
+						"          { pt116} as string,",
+						"          { pt117} as string,",
+						"          { pt118} as string,",
+						"          { pt119} as string,",
+						"          { pt120} as string,",
+						"          { pt121} as string,",
+						"          { pt122} as string,",
+						"          { pt123} as string,",
+						"          { pt124} as string,",
+						"          { pt125} as string,",
+						"          { pt126} as string,",
+						"          { pt127} as string,",
+						"          { pt128} as string,",
+						"          { pt129} as string,",
+						"          { pt130} as string,",
+						"          { pt131} as string,",
+						"          { pt132} as string,",
+						"          { pt133} as string,",
+						"          { pt134} as string,",
+						"          { pt135} as string,",
+						"          { pt136} as string,",
+						"          { pt137} as string,",
+						"          { pt138} as string,",
+						"          { pt139} as string,",
+						"          { pt140} as string,",
+						"          { pt141} as string,",
+						"          { pt142} as string,",
+						"          { pt143} as string,",
+						"          { pt144} as string,",
+						"          { pt145} as string,",
+						"          { pt146} as string,",
+						"          { pt147} as string,",
+						"          { pt148} as string,",
+						"          { pt149} as string,",
+						"          { pt150} as string,",
+						"          { pt151} as string,",
+						"          { pt152} as string,",
+						"          { pt153} as string,",
+						"          { pt154} as string,",
+						"          { pt155} as string,",
+						"          { pt156} as string,",
+						"          { pt157} as string,",
+						"          { pt158} as string,",
+						"          { pt159} as string,",
+						"          { pt160} as string,",
+						"          { pt161} as string,",
+						"          { pt162} as string,",
+						"          { pt163} as string,",
+						"          { pt164} as string,",
+						"          { pt165} as string,",
+						"          { pt166} as string,",
+						"          { pt167} as string,",
+						"          { pt168} as string,",
+						"          { pt169} as string,",
+						"          { pt170} as string,",
+						"          { pt171} as string,",
+						"          { pt172} as string,",
+						"          { pt173} as string,",
+						"          { pt174} as string,",
+						"          { pt175} as string,",
+						"          { pt176} as string,",
+						"          { pt177} as string,",
+						"          { pt178} as string,",
+						"          { pt179} as string,",
+						"          { pt180} as string,",
+						"          { pt181} as string,",
+						"          { pt182} as string,",
+						"          { pt183} as string,",
+						"          { pt184} as string,",
+						"          { pt185} as string,",
+						"          { pt186} as string,",
+						"          { pt187} as string,",
+						"          { pt188} as string,",
+						"          { pt189} as string,",
+						"          { pt190} as string,",
+						"          { pt191} as string,",
+						"          { pt192} as string,",
+						"          { pt193} as string,",
+						"          { pt194} as string,",
+						"          { pt195} as string,",
+						"          { pt196} as string,",
+						"          { pt197} as string,",
+						"          { pt198} as string,",
+						"          { pt199} as string,",
+						"          { pt200} as string,",
+						"          { pt201} as string,",
+						"          { pt202} as string,",
+						"          { pt203} as string,",
+						"          { pt204} as string,",
+						"          { pt205} as string,",
+						"          { pt206} as string,",
+						"          { pt207} as string,",
+						"          { pt208} as string,",
+						"          { pt209} as string,",
+						"          { pt210} as string,",
+						"          { pt211} as string,",
+						"          { pt212} as string,",
+						"          { pt213} as string,",
+						"          { pt214} as string,",
+						"          { pt215} as string,",
+						"          { pt216} as string,",
+						"          { pt217} as string,",
+						"          { pt218} as string,",
+						"          { pt219} as string,",
+						"          { pt220} as string,",
+						"          { pt221} as string,",
+						"          { pt222} as string,",
+						"          { pt223} as string,",
+						"          { pt224} as string,",
+						"          { pt225} as string,",
+						"          { pt226} as string,",
+						"          { pt227} as string,",
+						"          { pt228} as string,",
+						"          { pt229} as string,",
+						"          { pt230} as string,",
+						"          { pt231} as string,",
+						"          { pt232} as string,",
+						"          { pt233} as string,",
+						"          { pt234} as string,",
+						"          { pt235} as string,",
+						"          { pt236} as string,",
+						"          { pt237} as string,",
+						"          { pt238} as string,",
+						"          { pt239} as string,",
+						"          { pt240} as string,",
+						"          { pt241} as string,",
+						"          { pt242} as string,",
+						"          { pt243} as string,",
+						"          { pt244} as string,",
+						"          { pt245} as string,",
+						"          { pt246} as string,",
+						"          { pt247} as string,",
+						"          { pt248} as string,",
+						"          { pt249} as string,",
+						"          { pt250} as string,",
+						"          { pt251} as string,",
+						"          { pt252} as string,",
+						"          { pt253} as string,",
+						"          { pt254} as string,",
+						"          { pt255} as string,",
+						"          { pt256} as string,",
+						"          { pt257} as string,",
+						"          { pt258} as string,",
+						"          { pt259} as string,",
+						"          { pt260} as string,",
+						"          { pt261} as string,",
+						"          { pt262} as string,",
+						"          { pt263} as string,",
+						"          { pt264} as string,",
+						"          { pt265} as string,",
+						"          { pt266} as string,",
+						"          { pt267} as string,",
+						"          { pt268} as string,",
+						"          { pt269} as string,",
+						"          { pt270} as string,",
+						"          { pt271} as string,",
+						"          { pt272} as string,",
+						"          { pt273} as string,",
+						"          { pt274} as string,",
+						"          { pt275} as string,",
+						"          { pt276} as string,",
+						"          { pt277} as string,",
+						"          { pt278} as string,",
+						"          { pt279} as string,",
+						"          { pt280} as string,",
+						"          { pt281} as string,",
+						"          { pt282} as string,",
+						"          { pt283} as string,",
+						"          { pt284} as string,",
+						"          { pt285} as string,",
+						"          { pt286} as string,",
+						"          { pt287} as string,",
+						"          { pt288} as string,",
+						"          { pt289} as string,",
+						"          { pt290} as string,",
+						"          { pt291} as string,",
+						"          { pt292} as string,",
+						"          { pt293} as string,",
+						"          { pt294} as string,",
+						"          { pt295} as string,",
+						"          { pt296} as string,",
+						"          { pt297} as string,",
+						"          { pt298} as string,",
+						"          { pt299} as string,",
+						"          { pt300} as string,",
+						"          { pt301} as string,",
+						"          { pt302} as string,",
+						"          { pt303} as string,",
+						"          { pt304} as string,",
+						"          { pt305} as string,",
+						"          { pt306} as string,",
+						"          { pt307} as string,",
+						"          { pt308} as string,",
+						"          { pt309} as string,",
+						"          { pt310} as string,",
+						"          { pt311} as string,",
+						"          { pt312} as string,",
+						"          { pt313} as string,",
+						"          { pt314} as string,",
+						"          { pt315} as string,",
+						"          { pt316} as string,",
+						"          { pt317} as string,",
+						"          { pt318} as string,",
+						"          { pt319} as string,",
+						"          { pt320} as string,",
+						"          { pt321} as string,",
+						"          { pt322} as string,",
+						"          { pt323} as string,",
+						"          { pt324} as string,",
+						"          { pt325} as string,",
+						"          { pt326} as string,",
+						"          { pt327} as string,",
+						"          { pt328} as string,",
+						"          { pt329} as string,",
+						"          { pt330} as string,",
+						"          { pt331} as string,",
+						"          { pt332} as string,",
+						"          { pt333} as string,",
+						"          { pt334} as string,",
+						"          { pt335} as string,",
+						"          { pt336} as string,",
+						"          { pt337} as string,",
+						"          { pt338} as string,",
+						"          { pt339} as string,",
+						"          { pt340} as string,",
+						"          { pt341} as string,",
+						"          { pt342} as string,",
+						"          { pt343} as string,",
+						"          { pt344} as string,",
+						"          { pt345} as string,",
+						"          { pt346} as string,",
+						"          { pt347} as string,",
+						"          { pt348} as string,",
+						"          { pt349} as string,",
+						"          { pt350} as string,",
+						"          { pt351} as string,",
+						"          { pt352} as string,",
+						"          { pt353} as string,",
+						"          { pt354} as string,",
+						"          { pt355} as string,",
+						"          { pt356} as string,",
+						"          { pt357} as string,",
+						"          { pt358} as string,",
+						"          { pt359} as string,",
+						"          { pt360} as string,",
+						"          { pt361} as string,",
+						"          { pt362} as string,",
+						"          { pt363} as string,",
+						"          { pt364} as string,",
+						"          { pt365} as string,",
+						"          { pt366} as string,",
+						"          { pt367} as string,",
+						"          { pt368} as string,",
+						"          { pt369} as string,",
+						"          { pt370} as string,",
+						"          { pt371} as string,",
+						"          { pt372} as string,",
+						"          { pt373} as string,",
+						"          { pt374} as string,",
+						"          { pt375} as string,",
+						"          { pt376} as string,",
+						"          { pt377} as string,",
+						"          { pt378} as string,",
+						"          { pt379} as string,",
+						"          { pt380} as string,",
+						"          { pt381} as string,",
+						"          { pt382} as string,",
+						"          { pt383} as string,",
+						"          { pt384} as string,",
+						"          { pt385} as string,",
+						"          { pt386} as string,",
+						"          { pt387} as string,",
+						"          { pt388} as string,",
+						"          { pt389} as string,",
+						"          { pt390} as string,",
+						"          { pt391} as string,",
+						"          { pt392} as string,",
+						"          { pt393} as string,",
+						"          { pt394} as string,",
+						"          { pt395} as string,",
+						"          { pt396} as string,",
+						"          { pt397} as string,",
+						"          { pt398} as string,",
+						"          { pt399} as string,",
+						"          { pt400} as string,",
+						"          { pt401} as string,",
+						"          { pt402} as string,",
+						"          { pt403} as string,",
+						"          { pt404} as string,",
+						"          { pt405} as string,",
+						"          { pt406} as string,",
+						"          { pt407} as string,",
+						"          { pt408} as string,",
+						"          { pt409} as string,",
+						"          { pt410} as string,",
+						"          { pt411} as string,",
+						"          { pt412} as string,",
+						"          { pt413} as string,",
+						"          { pt414} as string,",
+						"          { pt415} as string,",
+						"          { pt416} as string,",
+						"          { pt417} as string,",
+						"          { pt418} as string,",
+						"          { pt419} as string,",
+						"          { pt420} as string,",
+						"          { pt421} as string,",
+						"          { pt422} as string,",
+						"          { pt423} as string,",
+						"          { pt424} as string,",
+						"          { pt425} as string,",
+						"          { pt426} as string,",
+						"          { pt427} as string,",
+						"          { pt428} as string,",
+						"          { pt429} as string,",
+						"          { pt430} as string,",
+						"          { pt431} as string,",
+						"          { pt432} as string,",
+						"          { pt433} as string,",
+						"          { pt434} as string,",
+						"          { pt435} as string,",
+						"          { pt436} as string,",
+						"          { pt437} as string,",
+						"          { pt438} as string,",
+						"          { pt439} as string,",
+						"          { pt440} as string,",
+						"          { pt441} as string,",
+						"          { pt442} as string,",
+						"          { pt443} as string,",
+						"          { pt444} as string,",
+						"          { pt445} as string,",
+						"          { pt446} as string,",
+						"          { pt447} as string,",
+						"          { pt448} as string,",
+						"          { pt449} as string,",
+						"          { pt450} as string,",
+						"          { pt451} as string,",
+						"          { pt452} as string,",
+						"          { pt453} as string,",
+						"          { pt454} as string,",
+						"          { pt455} as string,",
+						"          { pt456} as string,",
+						"          { pt457} as string,",
+						"          { pt458} as string,",
+						"          { pt459} as string,",
+						"          { pt460} as string,",
+						"          { pt461} as string,",
+						"          { pt462} as string,",
+						"          { pt463} as string,",
+						"          { pt464} as string,",
+						"          { pt465} as string,",
+						"          { pt466} as string,",
+						"          { pt467} as string,",
+						"          { pt468} as string,",
+						"          { pt469} as string,",
+						"          { pt470} as string,",
+						"          { pt471} as string,",
+						"          { pt472} as string,",
+						"          { pt473} as string,",
+						"          { pt474} as string,",
+						"          { pt475} as string,",
+						"          { pt476} as string,",
+						"          { pt477} as string,",
+						"          { pt478} as string,",
+						"          { pt479} as string,",
+						"          { pt480} as string,",
+						"          { pt481} as string,",
+						"          { pt482} as string,",
+						"          { pt483} as string,",
+						"          { pt484} as string,",
+						"          { pt485} as string,",
+						"          { pt486} as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> pwdb",
+						"source(output(",
+						"          session_id as string,",
+						"          signal_type as string,",
+						"          value as string,",
+						"          timestamp as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> mmdb",
+						"pwdb unpivot(output(",
+						"          variable as string,",
+						"          value as string",
+						"     ),",
+						"     ungroupBy({Subject Number}),",
+						"     lateral: true,",
+						"     ignoreNullPivots: false) ~> melt",
+						"melt derive({Subject Number} = concatWS(\"_\", \"pwdb\", concat(\"s\", lpad({Subject Number},6,\"0\")),\"pAorticRoot\",\"n00000\"),",
+						"          variable = 2*toInteger(dropLeft(variable,3))-2,",
+						"          value = toFloat({value})) ~> transformColumns",
+						"transformColumns select(mapColumn(",
+						"          waveform_id = {Subject Number},",
+						"          timestamp_rel = variable,",
+						"          value",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> renameColumns",
+						"mmdb filter(({signal_type}=='cath_signal') && (split({session_id},'-')[2]=='stacked1')) ~> filterCathSignalAndStacked",
+						"filterCathSignalAndStacked derive(cad_name = split(session_id,'-')[1],",
+						"          n_stacks = toInteger(dropLeft(split(session_id,'-')[2],7)),",
+						"          waveform_num = toInteger(split(session_id,'-')[3]),",
+						"          timestamp = toLong({timestamp}),",
+						"          value = toFloat(value)) ~> splitSessionId",
+						"splitSessionId aggregate(groupBy(session_id),",
+						"     timestamp_min = min(timestamp)) ~> aggMinTimestamps",
+						"createWaveformID, aggMinTimestamps join(mmdb@session_id == aggMinTimestamps@session_id,",
+						"     joinType:'left',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> joinTimestamps",
+						"joinTimestamps derive(timestamp_rel = timestamp - timestamp_min) ~> TimestampRel",
+						"splitSessionId derive(waveform_id = concatWS(\"_\", \"mmdb\", concat(\"s\", {cad_name}),\"pAorticRoot\",concat(\"n\", lpad(toString({waveform_num}),6,\"0\")))) ~> createWaveformID",
+						"TimestampRel select(mapColumn(",
+						"          waveform_id,",
+						"          timestamp_rel,",
+						"          value",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> mainDBdropExtraColumns",
+						"TimestampRel select(mapColumn(",
+						"          waveform_id,",
+						"          timestamp",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> initTimestampDBdropExtraColumns",
+						"initTimestampDBdropExtraColumns aggregate(groupBy(waveform_id),",
+						"     timestamp = min(timestamp)) ~> dropDuplicates",
+						"renameColumns sink(allowSchemaDrift: true,",
+						"     validateSchema: true,",
+						"     partitionFileNames:['pwdb_long.csv'],",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SinkPWDBMain",
+						"mainDBdropExtraColumns sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['mmdb_long.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SinkMMDBMain",
+						"dropDuplicates sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['mmdb_init_ts.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SinkMMDBInitTimestamps"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/pwdb')]",
+				"[concat(variables('factoryId'), '/datasets/mmdb')]",
+				"[concat(variables('factoryId'), '/datasets/output_blob')]"
+			]
+		}
+	]
+}
