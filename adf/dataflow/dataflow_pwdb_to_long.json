@@ -15,11 +15,11 @@
 			"sinks": [
 				{
 					"dataset": {
-						"referenceName": "waveform_db",
+						"referenceName": "pwdb_long",
 						"type": "DatasetReference"
 					},
 					"name": "Sink",
-					"description": "send to SQL database"
+					"description": "send to cache"
 				}
 			],
 			"transformations": [
@@ -545,14 +545,10 @@
 				"     skipDuplicateMapOutputs: true) ~> renameColumns",
 				"renameColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     deletable:false,",
-				"     insertable:true,",
-				"     updateable:false,",
-				"     upsertable:false,",
-				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> Sink"
+				"     saveOrder: 1,",
+				"     format: 'table') ~> Sink"
 			]
 		}
 	}

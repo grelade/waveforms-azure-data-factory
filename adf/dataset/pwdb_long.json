@@ -1,0 +1,23 @@
+{
+	"name": "pwdb_long",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "data_blob",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "pwdb-long",
+				"container": "raw-waveform-data"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
