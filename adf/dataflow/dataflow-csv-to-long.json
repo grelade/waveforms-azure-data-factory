@@ -1,5 +1,5 @@
 {
-	"name": "dataflow_pwdb_to_long",
+	"name": "dataflow-csv-to-long",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
@@ -9,17 +9,38 @@
 						"referenceName": "pwdb",
 						"type": "DatasetReference"
 					},
-					"name": "Source"
+					"name": "pwdb"
+				},
+				{
+					"dataset": {
+						"referenceName": "mmdb",
+						"type": "DatasetReference"
+					},
+					"name": "mmdb"
 				}
 			],
 			"sinks": [
 				{
 					"dataset": {
-						"referenceName": "pwdb_long",
+						"referenceName": "output_blob",
 						"type": "DatasetReference"
 					},
-					"name": "Sink",
-					"description": "send to cache"
+					"name": "SinkPWDBMain"
+				},
+				{
+					"dataset": {
+						"referenceName": "output_blob",
+						"type": "DatasetReference"
+					},
+					"name": "SinkMMDBMain",
+					"description": "Export MMDB data to output_blob"
+				},
+				{
+					"dataset": {
+						"referenceName": "output_blob",
+						"type": "DatasetReference"
+					},
+					"name": "SinkMMDBInitTimestamps"
 				}
 			],
 			"transformations": [
@@ -31,6 +52,35 @@
 				},
 				{
 					"name": "renameColumns"
+				},
+				{
+					"name": "filterCathSignalAndStacked"
+				},
+				{
+					"name": "splitSessionId"
+				},
+				{
+					"name": "aggMinTimestamps"
+				},
+				{
+					"name": "joinTimestamps"
+				},
+				{
+					"name": "TimestampRel",
+					"description": "timestamp_min, timestamp_rel'"
+				},
+				{
+					"name": "createWaveformID"
+				},
+				{
+					"name": "mainDBdropExtraColumns"
+				},
+				{
+					"name": "initTimestampDBdropExtraColumns",
+					"description": "prepare auxiliary db with initial timestamp per waveform"
+				},
+				{
+					"name": "dropDuplicates"
 				}
 			],
 			"scriptLines": [
@@ -525,8 +575,18 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> Source",
-				"Source unpivot(output(",
+				"     ignoreNoFilesFound: false,",
+				"     partitionBy('hash', 1)) ~> pwdb",
+				"source(output(",
+				"          session_id as string,",
+				"          signal_type as string,",
+				"          value as string,",
+				"          timestamp as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> mmdb",
+				"pwdb unpivot(output(",
 				"          variable as string,",
 				"          value as string",
 				"     ),",
@@ -543,12 +603,55 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> renameColumns",
+				"mmdb filter(({signal_type}=='cath_signal') && (split({session_id},'-')[2]=='stacked1')) ~> filterCathSignalAndStacked",
+				"filterCathSignalAndStacked derive(cad_name = split(session_id,'-')[1],",
+				"          n_stacks = toInteger(dropLeft(split(session_id,'-')[2],7)),",
+				"          waveform_num = toInteger(split(session_id,'-')[3]),",
+				"          timestamp = toLong({timestamp}),",
+				"          value = toFloat(value)) ~> splitSessionId",
+				"splitSessionId aggregate(groupBy(session_id),",
+				"     timestamp_min = min(timestamp)) ~> aggMinTimestamps",
+				"createWaveformID, aggMinTimestamps join(mmdb@session_id == aggMinTimestamps@session_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinTimestamps",
+				"joinTimestamps derive(timestamp_rel = timestamp - timestamp_min) ~> TimestampRel",
+				"splitSessionId derive(waveform_id = concatWS(\"_\", \"mmdb\", concat(\"s\", {cad_name}),\"pAorticRoot\",concat(\"n\", lpad(toString({waveform_num}),6,\"0\")))) ~> createWaveformID",
+				"TimestampRel select(mapColumn(",
+				"          waveform_id,",
+				"          timestamp_rel,",
+				"          value",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> mainDBdropExtraColumns",
+				"TimestampRel select(mapColumn(",
+				"          waveform_id,",
+				"          timestamp",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> initTimestampDBdropExtraColumns",
+				"initTimestampDBdropExtraColumns aggregate(groupBy(waveform_id),",
+				"     timestamp = min(timestamp)) ~> dropDuplicates",
 				"renameColumns sink(allowSchemaDrift: true,",
-				"     validateSchema: false,",
+				"     validateSchema: true,",
+				"     partitionFileNames:['pwdb_long.csv'],",
+				"     truncate: true,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     saveOrder: 1,",
-				"     format: 'table') ~> Sink"
+				"     partitionBy('hash', 1)) ~> SinkPWDBMain",
+				"mainDBdropExtraColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['mmdb_long.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SinkMMDBMain",
+				"dropDuplicates sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['mmdb_init_ts.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SinkMMDBInitTimestamps"
 			]
 		}
 	}

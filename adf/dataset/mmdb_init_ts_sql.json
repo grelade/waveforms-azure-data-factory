@@ -1,0 +1,16 @@
+{
+	"name": "mmdb_init_ts_sql",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "service_waveform_db",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "sql",
+			"table": "mmdb_init_ts"
+		}
+	}
+}

@@ -1,0 +1,29 @@
+{
+	"name": "pwdb_sql",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "service_waveform_db",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "waveform_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "timestamp_rel",
+				"type": "nvarchar"
+			},
+			{
+				"name": "value",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "sql",
+			"table": "pwdb"
+		}
+	}
+}

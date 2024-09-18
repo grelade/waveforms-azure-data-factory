@@ -1,5 +1,5 @@
 {
-	"name": "waveform_db",
+	"name": "mmdb_sql",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "service_waveform_db",
@@ -10,7 +10,7 @@
 		"schema": [],
 		"typeProperties": {
 			"schema": "sql",
-			"table": "waveform_db"
+			"table": "mmdb"
 		}
 	}
 }
