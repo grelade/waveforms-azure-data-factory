@@ -19,7 +19,7 @@
 						"type": "DatasetReference"
 					},
 					"name": "Sink",
-					"description": "send to cache"
+					"description": "send to blob"
 				}
 			],
 			"transformations": [

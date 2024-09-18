@@ -10,7 +10,6 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
-				"fileName": "pwdb-long",
 				"container": "raw-waveform-data"
 			},
 			"columnDelimiter": ",",
