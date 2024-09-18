@@ -1,0 +1,40 @@
+{
+	"name": "mmdb",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "data_blob",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "mmdb-agg_inputs_CAD",
+				"container": "raw-waveform-data"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "session_id",
+				"type": "String"
+			},
+			{
+				"name": "signal_type",
+				"type": "String"
+			},
+			{
+				"name": "value",
+				"type": "String"
+			},
+			{
+				"name": "timestamp",
+				"type": "String"
+			}
+		]
+	}
+}
