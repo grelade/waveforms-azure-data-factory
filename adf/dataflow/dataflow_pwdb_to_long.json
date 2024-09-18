@@ -15,11 +15,10 @@
 			"sinks": [
 				{
 					"dataset": {
-						"referenceName": "pwdb_long",
+						"referenceName": "output_blob",
 						"type": "DatasetReference"
 					},
-					"name": "Sink",
-					"description": "send to blob"
+					"name": "Sink"
 				}
 			],
 			"transformations": [
@@ -544,11 +543,12 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> renameColumns",
 				"renameColumns sink(allowSchemaDrift: true,",
-				"     validateSchema: false,",
+				"     validateSchema: true,",
+				"     partitionFileNames:['pwdb_long.csv'],",
+				"     truncate: true,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     saveOrder: 1,",
-				"     format: 'table') ~> Sink"
+				"     partitionBy('hash', 1)) ~> Sink"
 			]
 		}
 	}

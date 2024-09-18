@@ -1,5 +1,5 @@
 {
-	"name": "pwdb_long",
+	"name": "output_blob",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "data_blob",
@@ -10,7 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
-				"container": "raw-waveform-data"
+				"container": "output-waveform-data"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
