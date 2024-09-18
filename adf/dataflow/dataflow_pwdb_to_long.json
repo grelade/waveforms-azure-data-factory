@@ -9,14 +9,14 @@
 						"referenceName": "pwdb",
 						"type": "DatasetReference"
 					},
-					"name": "Source"
+					"name": "pwdb"
 				},
 				{
 					"dataset": {
 						"referenceName": "mmdb",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "mmdb"
 				}
 			],
 			"sinks": [
@@ -37,6 +37,12 @@
 				},
 				{
 					"name": "renameColumns"
+				},
+				{
+					"name": "filterCathSignalAndStacked"
+				},
+				{
+					"name": "splitSessionId"
 				}
 			],
 			"scriptLines": [
@@ -532,7 +538,7 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false,",
-				"     partitionBy('hash', 1)) ~> Source",
+				"     partitionBy('hash', 1)) ~> pwdb",
 				"source(output(",
 				"          session_id as string,",
 				"          signal_type as string,",
@@ -541,8 +547,8 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> source1",
-				"Source unpivot(output(",
+				"     ignoreNoFilesFound: false) ~> mmdb",
+				"pwdb unpivot(output(",
 				"          variable as string,",
 				"          value as string",
 				"     ),",
@@ -559,6 +565,10 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> renameColumns",
+				"mmdb filter(({signal_type}=='cath_signal') && (split({session_id},'-')[2]=='stacked1')) ~> filterCathSignalAndStacked",
+				"filterCathSignalAndStacked derive(cad_name = split({session_id},'-')[1],",
+				"          n_stacks = toInteger(dropLeft(split({session_id},'-')[2],7)),",
+				"          waveform_num = toInteger(split({session_id},'-')[3])) ~> splitSessionId",
 				"renameColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: true,",
 				"     partitionFileNames:['pwdb_long.csv'],",
