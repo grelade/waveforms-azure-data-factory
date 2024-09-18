@@ -7,7 +7,20 @@
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
-		"schema": [],
+		"schema": [
+			{
+				"name": "waveform_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "timestamp_rel",
+				"type": "nvarchar"
+			},
+			{
+				"name": "value",
+				"type": "nvarchar"
+			}
+		],
 		"typeProperties": {
 			"schema": "sql",
 			"table": "pwdb"
