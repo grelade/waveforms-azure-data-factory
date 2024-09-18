@@ -5,7 +5,7 @@
 		"type": "AzureBlobStorage",
 		"typeProperties": {
 			"serviceEndpoint": "https://waveformstorage1234.blob.core.windows.net/",
-			"accountKind": "StorageV2"
+			"accountKind": "BlobStorage"
 		}
 	},
 	"type": "Microsoft.DataFactory/factories/linkedservices"
