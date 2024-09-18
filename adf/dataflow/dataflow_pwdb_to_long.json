@@ -25,7 +25,22 @@
 						"referenceName": "output_blob",
 						"type": "DatasetReference"
 					},
-					"name": "Sink"
+					"name": "SinkPWDBMain"
+				},
+				{
+					"dataset": {
+						"referenceName": "output_blob",
+						"type": "DatasetReference"
+					},
+					"name": "SinkMMDBMain",
+					"description": "Export MMDB data to output_blob"
+				},
+				{
+					"dataset": {
+						"referenceName": "output_blob",
+						"type": "DatasetReference"
+					},
+					"name": "SinkMMDBInitTimestamps"
 				}
 			],
 			"transformations": [
@@ -624,7 +639,19 @@
 				"     truncate: true,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> Sink"
+				"     partitionBy('hash', 1)) ~> SinkPWDBMain",
+				"mainDBdropExtraColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['mmdb_long.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SinkMMDBMain",
+				"dropDuplicates sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['mmdb_init_ts.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SinkMMDBInitTimestamps"
 			]
 		}
 	}
