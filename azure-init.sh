@@ -13,9 +13,8 @@ DATAFACTORY_NAME="waveform-df"
 GITHUB_DF_NAME="waveforms-azure-data-factory"
 
 SUBSCRIPTION_ID=$(az account list --query "[?user.name=='jacekgrela@gmail.com'].id" --output tsv)
+USER_ID=$(az ad user list --query "[?mail=='jacekgrela@gmail.com'].id" --output tsv)
 SQL_NAME="waveform-sql-server"
-SQL_PASSWORD="zaq12wsxZ"
-SQL_USER="azureuser"
 SQL_DB="waveform_db"
 
 #### RESOURCE GROUP
@@ -41,7 +40,7 @@ DF_MANAGEDID=$(az datafactory show --name $DATAFACTORY_NAME --query identity.pri
 az role assignment create --role "Storage Blob Data Contributor" --scope /subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${AZURE_DEFAULTS_GROUP}/providers/Microsoft.Storage/storageAccounts/${AZURE_STORAGE_ACCOUNT} --assignee-object-id $DF_MANAGEDID --assignee-principal-type ServicePrincipal
 
 #### SQL SERVER + SQL DB
-az sql server create --name $SQL_NAME --enable-ad-only-auth --external-admin-sid $SUBSCRIPTION_ID --external-admin-name azureuser
+az sql server create --name $SQL_NAME --enable-ad-only-auth --external-admin-sid $USER_ID --external-admin-name azureuser
 # az sql server create --name $SQL_NAME --admin-password $SQL_PASSWORD --admin-user $SQL_USER
 az sql db create --name $SQL_DB --server $SQL_NAME --zone-redundant false --backup-storage-redundancy Local --family Gen4 --edition Basic --capacity 5 --service-level-objective Basic
 az sql server firewall-rule create --server $SQL_NAME --name AllowAllWindowsAzureIps --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
